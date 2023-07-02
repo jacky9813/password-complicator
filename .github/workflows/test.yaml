@@ -1,0 +1,35 @@
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  unittest:
+    name: Running unit test
+    strategy:
+      matrix:
+        python-version:
+          - "3.8"
+          - "3.9"
+          - "3.10"
+          - "3.11"
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install package
+        run: |
+          python -m pip install -U pip
+          pip install -e .[dev]
+      - name: Run unittest
+        run: |
+          python -m coverage run -m unittest
+          python -m coverage report

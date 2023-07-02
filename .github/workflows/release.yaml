@@ -1,0 +1,55 @@
+on:
+  push:
+    tags:
+      - '[0-9]+(\.[0-9]+)*'
+
+jobs:
+  release:
+    name: Build wheel file
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Setup build tool
+        run: pip3 install build
+      - id: build
+        name: Build wheel
+        run: |
+          python3 -m build -s -w
+          pushd dist
+          echo "wheel_file=$(ls *.whl)" >> "$GITHUB_ENV"
+          echo "tar_file=$(ls *.tar.gz)" >> "$GITHUB_ENV"
+          popd
+      - id: release
+        name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: Upload Wheel Filee
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.release.outputs.upload_url }}
+          asset_path: ./dist/${{ env.wheel_file }}
+          asset_name: ${{ env.wheel_file }}
+          asset_content_type: application/x-pywheel+zip
+      - name: Upload Tarball
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.release.outputs.upload_url }}
+          asset_path: ./dist/${{ env.tar_file }}
+          asset_name: ${{ env.tar_file }}
+          asset_content_type: application/x-tar+gzip
